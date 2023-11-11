@@ -1,61 +1,66 @@
 ## Objectifs du système à modéliser
+Le projet vise à mettre en place un système de cashback pour une carte platinum AmericanExpress, impliquant plusieurs acteurs majeurs.
 
-On propose de modéliser un système de réservation (master) de tickets pouvant supporter plusieurs vendeurs (vendor). Le système master gère les salles, les concerts, les différents artistes se produisant dans les concerts et la réservation des tickets alors que les vendeurs assurent la vente de billets. Chaque vendeur a un quota pour un concert donné, qui peut évoluer avec le temps.
-En cas d'annulation de concert, le système de réservation informe les vendors qui doivent contacter les clients (customers). Le master propose des services de validation de l'authenticité des tickets à l'entrée des concerts.
+Les acteurs comprennent un client utilisant la carte, Air France en tant que service marchand, American Express avec sa base de données, le service de paiement AmexPay, utilisé par le client, un service marketing et un service dédié au cashback.
 
-Lors de la réservation de ticket, on a 2 phases:
-- le booking (réservation des places)
-- le ticketing (émission de billets sécurisés avec clé.)
+Le flux d'activités commence par le client effectuant un paiement chez Air France avec AmexPay. Les données de cette transaction sont enregistrées par Air France, puis transmises à American Express. American Express analyse les données et, si le client correspond aux critères définis par le service marketing, envoie les informations à ce dernier.
 
-Le vendor va demander au master via une API rest les concerts pour lesquels il possède un quota. Seuls ces concerts seront proposés à la vente au client.
-Le client spécifie ensuite le nombre de places assises et le nombre de places debout qu'il souhaite acheter. Le vendor interroge le master sur la disponibilité. Celui-ci va lui renvoyer des tickets transitionnels valables 10 minutes en cas de disponibilité de places.
-Le vendeur va ensuite renseigner les informations du client et les transmettre au master pour l'émission finale des tickets avec clé sécurisée qui sera transmise au client pour qu'il puisse entrer dans la salle.
-En cas d'annulation du concert, le master prévient les vendors (avec les informations des tickets à annuler et les emails des clients) le vendeur doit envoyer un email au client pour chaque ticket annulé.
+Simultanément, les données de la transaction sont également acheminées vers le service de cashback avec le montant du cashback. Ce montant est ensuite envoyé à AmexPay. Le client, connecté à AmexPay, a ainsi accès à l'argent provenant du cashback.
+
+Les communications entre les différents services sont spécifiées comme suit : le client communique avec Air France et AmexPay, Air France communique avec American Express, American Express communique avec le service marketing et le service de cashback, et enfin, le service de cashback communique avec AmexPay.
+
 
 ## Interfaces
 
 ```
-artist->master: POST venue
-vendor->master: GET Gigs
-master->vendor: Collection<Gigs>
+actor Client
+AirFrance
+AmericanExpressPay
+AmericanExpress
+CashbackService
+Marketing
 
-Customer->vendor: cli:gig selection
 
-vendor->master: jms:booking
-alt booking successfull
-    master->vendor: transitional tickets
-    vendor->Customer: ticket purshase ok
-    Customer->vendor: cli:customer informations
-    
-    vendor->master: jms:ticketing
-    master->vendor: tickets
+Client -> AirFrance : réserver un billet
+Client -> AmericanExpressPay : payer 
+AmericanExpressPay -> Client : validation paiement 
 
-else booking unsuccessfull
-    master->vendor: no quota for gigs
-end
-
-opt venue cancellation
-    artist->master: DELETE venue
-    master->vendor: jms:topic:cancellation
-    vendor->Customer: smtp:cancellation email
-end
+par 
+AirFrance -> AmericanExpress : transmettre les informations sur le cashback suite au paiement
+AmericanExpressPay -> AmericanExpress : envoyer le taux
+AmericanExpress -> AmericanExpress : calculer l'avantage
+AmericanExpress -> Client : envoyer mail 
+AmericanExpress -> CashbackService : envoyer montant du cashback
+CashbackService -> AmericanExpressPay : donner le montant du cashback (en $)
+AmericanExpressPay -> Client : envoyer le montant du cashback
+AmericanExpress -> Marketing : transmettre les informations du client
+end 
 ```
-![](seqDiagram.png)
+![](sequenceDiag.png)
 
 ## Schéma relationnel
-
+susceptible d’évoluer en fonction des besoins
 ![](EER.png)
 
 ## Exigences fonctionnelles
+1. **Enregistrement des Transactions :**
+    - Le système DOIT enregistrer toutes les transactions effectuées par les clients utilisant la carte platinum chez Air France via AmexPay.
+  
+2. **Transmission des données à American Express :**
+    - Air France DOIT transmettre les données de chaque transaction à American Express.
 
-* le vendor NE DOIT proposer que les concerts pour lesquels il a un quota disponible, transmis par le master.
-* le vendor DOIT pouvoir effectuer les opérations de booking et ticketing
-* le master DOIT permettre à l'artiste d'annuler son concert.
-* le master DOIT informer le vendor en cas d'annulation de concert
-* le vendor DOIT informer les clients de l'annulation du concert par mail
-* le master DOIT proposer un service de validation de la clé du ticket, pour les contrôles aux entées.
+3. **Analyse des Données par American Express :**
+    - American Express DOIT analyser les données des transactions reçues.
+
+4. **Communication avec le Service Marketing :**
+    - American Express DOIT communiquer avec le service marketing pour partager les données des clients éligibles au cashback et répondant aux critères définis par le service marketing.
+    - Les données transmises DOIVENT inclure les détails du client et toute information pertinente pour les promotions.
+
+5. **Calcul du Cashback :**
+    - Le service de cashback DOIT recevoir les données de la transaction et calculer le montant du cashback en fonction des règles prédéfinies.
+    - Le montant du cashback calculé DOIT être transmis à AmexPay pour être mis à la disposition du client.
 
 ## Exigences non fonctionnelles
 
-* le booking et le ticketing, bien qu'étant des opérations synchrones, DOIVENT être fiables et donc utiliser le messaging
-* Lors de l'annulation de tickets, le master DOIT informer tous les vendors de l'annulation, de façon fiable.
+* Les opérations H2H (Human To Human) DOIVENT utiliser Rest et messaging.
+* Les opérations M2M (Machine To Machine) DOIVENT utiliser JMS
