@@ -9,9 +9,9 @@
     <packaging>pom</packaging>
     <name>project-m1</name>
     <modules>
-        <module>ticket-master</module>
-        <module>ticket-vendor</module>
-        <module>ticket-commons</module>
+        <module>AEX-master</module>
+        <module>AEX-vendor</module>
+        <module>AEX-commons</module>
     </modules>
     <build>
         <plugins>
