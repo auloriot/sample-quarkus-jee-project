@@ -26,14 +26,15 @@ Client -> AmericanExpressPay : payer
 AmericanExpressPay -> Client : validation paiement 
 
 par 
-AirFrance -> AmericanExpress : transmettre les informations sur le cashback suite au paiement
+AirFrance -> AmericanExpress : transmettre le montant et le client
+AmericanExpress -> AmericanExpressPay : demander le taux 
 AmericanExpressPay -> AmericanExpress : envoyer le taux
-AmericanExpress -> AmericanExpress : calculer l'avantage
-AmericanExpress -> Client : envoyer mail 
-AmericanExpress -> CashbackService : envoyer montant du cashback
+AmericanExpress -> CashbackService : envoyer le montant et le taux 
+CashbackService -> CashbackService   : calculer l'avantage
 CashbackService -> AmericanExpressPay : donner le montant du cashback (en $)
 AmericanExpressPay -> Client : envoyer le montant du cashback
 AmericanExpress -> Marketing : transmettre les informations du client
+AmericanExpressPay -> Client : envoyer mail
 end 
 ```
 ![](sequenceDiag.png)
