@@ -63,5 +63,5 @@ susceptible d’évoluer en fonction des besoins
 
 ## Exigences non fonctionnelles
 
-* Les opérations H2H (Human To Human) DOIVENT utiliser Rest et messaging.
+* Les opérations H2M (Human To Machine) DOIVENT utiliser Rest et messaging.
 * Les opérations M2M (Machine To Machine) DOIVENT utiliser JMS
